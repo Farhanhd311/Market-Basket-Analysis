@@ -170,53 +170,46 @@ export function resetCache(): void {
   _stats = null;
 }
 
-// ─── 4. seedProductsIfEmpty() ──────────────────────────────────────────────
-export async function seedProductsIfEmpty() {
+// ─── 4. seedStockIfEmpty() ─────────────────────────────────────────────────
+export async function seedStockIfEmpty() {
   try {
-    const count = await prisma.product.count();
-    if (count > 0) return;
+    const count = await prisma.stock.count();
+    if (count > 0) return; // Sudah ada data, skip
 
     const rows = parseTransactions();
     if (rows.length === 0) return;
 
-    // Group by product_name (bukan product_id karena product_id di CSV = ID per baris, bukan per katalog)
-    // Ambil harga tertinggi dan kategori dari kemunculan pertama setiap produk
-    const productMap = new Map<string, { category: string; price: number }>();
+    // Group by product_name → 68 produk unik
+    const productMap = new Map<string, { category: string }>();
     for (const r of rows) {
       if (!productMap.has(r.product_name)) {
-        productMap.set(r.product_name, {
-          category: r.category,
-          price: r.price,
-        });
+        productMap.set(r.product_name, { category: r.category });
       }
     }
 
-    const minStock = 15;
-    const data = Array.from(productMap.entries()).map(([name, info], idx) => {
-      const isCritical = idx % 4 === 0; // ~25% produk dalam kondisi kritis
-      const stock = isCritical ? (idx % 10) + 3 : (idx % 30) + 20;
-
-      return {
-        productId: String(idx + 1).padStart(3, "0"),
-        name,
-        category: info.category,
-        price: info.price,
-        stock,
-        minStock,
-      };
-    });
-
-    for (const item of data) {
-      await prisma.product.upsert({
-        where: { productId: item.productId },
+    let idx = 0;
+    for (const [name, info] of productMap.entries()) {
+      const productId = String(idx + 1).padStart(3, "0");
+      // Stok acak 0–80, seed deterministik berdasarkan idx
+      const currentStock = (idx * 37 + 13) % 81; // 0–80, deterministik
+      await prisma.stock.upsert({
+        where: { productId },
         update: {},
-        create: item,
+        create: {
+          productId,
+          productName: name,
+          category: info.category,
+          currentStock,
+          minThreshold: 15,
+        },
       });
+      idx++;
     }
-    console.log(`[data] Seeded ${data.length} unique products into SQLite database.`);
+    console.log(`[data] Seeded ${idx} unique stocks into SQLite.`);
   } catch (error) {
-    console.error("[data] Error seeding products:", error);
+    console.error("[data] Error seeding stocks:", error);
   }
 }
 
-
+// Alias untuk backward compat (dipakai di halaman lama)
+export const seedProductsIfEmpty = seedStockIfEmpty;

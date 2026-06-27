@@ -1,327 +1,280 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
-import { Plus, Edit2, Check, X, Package, Trash } from "lucide-react";
-import { DataTable, Column, Badge, Button, Card } from "@/components/ui";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { updateStock } from "@/app/inventory/actions";
+import { DataTable, Column, Badge } from "@/components/ui";
 
-interface ProductData {
+interface StockItem {
   id: string;
   productId: string;
-  name: string;
+  productName: string;
   category: string;
-  price: number;
-  stock: number;
-  minStock: number;
+  currentStock: number;
+  minThreshold: number;
 }
 
-export default function InventoryClient({ initialProducts }: { initialProducts: ProductData[] }) {
-  const router = useRouter();
-  const [products, setProducts] = useState<ProductData[]>(initialProducts);
+interface EditState {
+  currentStock: number;
+  minThreshold: number;
+}
+
+function EditRow({
+  item,
+  onClose,
+}: {
+  item: StockItem;
+  onClose: () => void;
+}) {
+  const [vals, setVals] = useState<EditState>({
+    currentStock: item.currentStock,
+    minThreshold: item.minThreshold,
+  });
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    startTransition(async () => {
+      await updateStock(item.id, vals.currentStock, vals.minThreshold);
+      onClose();
+    });
+  }
+
+  return (
+    <tr className="bg-teal-50 border-t border-teal-200">
+      <td colSpan={7} className="px-4 py-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="font-medium text-[#1C2B2A] text-sm">
+            Edit: <strong>{item.productName}</strong>
+          </span>
+          <label className="flex items-center gap-2 text-sm text-[#1C2B2A]">
+            Stok saat ini:
+            <input
+              type="number"
+              min={0}
+              value={vals.currentStock}
+              onChange={(e) =>
+                setVals((v) => ({
+                  ...v,
+                  currentStock: Math.max(0, Number(e.target.value)),
+                }))
+              }
+              className="w-24 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-[#1C2B2A]">
+            Ambang minimum:
+            <input
+              type="number"
+              min={0}
+              value={vals.minThreshold}
+              onChange={(e) =>
+                setVals((v) => ({
+                  ...v,
+                  minThreshold: Math.max(0, Number(e.target.value)),
+                }))
+              }
+              className="w-24 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+          </label>
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="bg-[#0E5C57] hover:bg-[#13837A] text-white text-sm font-medium px-4 py-1.5 rounded-md disabled:opacity-60 transition-colors"
+          >
+            {isPending ? "Menyimpan…" : "Simpan"}
+          </button>
+          <button
+            onClick={onClose}
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-md border border-gray-200 hover:border-gray-400 transition-colors"
+          >
+            Batal
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export default function InventoryClient({ items }: { items: StockItem[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editStock, setEditStock] = useState<number>(0);
-  const [editMinStock, setEditMinStock] = useState<number>(0);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  // Add Product Form states
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newProductId, setNewProductId] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState("");
-  const [newPrice, setNewPrice] = useState<number>(100);
-  const [newStock, setNewStock] = useState<number>(20);
-  const [newMinStock, setNewMinStock] = useState<number>(15);
-  const [submitting, setSubmitting] = useState(false);
+  const isCritical = (item: StockItem) =>
+    item.currentStock <= item.minThreshold;
 
-  const startEditing = (p: ProductData) => {
-    setEditingId(p.id);
-    setEditStock(p.stock);
-    setEditMinStock(p.minStock);
-  };
-
-  const handleSave = async (id: string) => {
-    setLoadingId(id);
-    try {
-      const res = await fetch("/api/inventory", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, stock: editStock, minStock: editMinStock }),
-      });
-
-      if (!res.ok) throw new Error("Gagal menyimpan data.");
-      
-      const updated = await res.json();
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: updated.stock, minStock: updated.minStock } : p));
-      setEditingId(null);
-      router.refresh(); // Refresh Next.js server components cache
-    } catch (e) {
-      alert("Error: Gagal memperbarui stok.");
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/inventory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: newProductId,
-          name: newName,
-          category: newCategory,
-          price: Number(newPrice),
-          stock: Number(newStock),
-          minStock: Number(newMinStock),
-        }),
-      });
-
-      if (!res.ok) throw new Error("Gagal menambah produk");
-
-      const created = await res.json();
-      setProducts(prev => [created, ...prev]);
-      setShowAddForm(false);
-      
-      // Reset Form
-      setNewProductId("");
-      setNewName("");
-      setNewCategory("");
-      setNewPrice(100);
-      setNewStock(20);
-      setNewMinStock(15);
-      router.refresh();
-    } catch (error) {
-      alert("Error: Gagal menambahkan produk baru.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const columns: Column<ProductData>[] = [
+  const columns: Column<StockItem>[] = [
     {
-      header: "Kode Produk",
+      header: "ID",
       accessorKey: "productId",
       sortable: true,
-      cell: (p) => <span className="font-mono text-xs font-bold text-gray-500">#{p.productId}</span>,
+      cell: (item) => (
+        <span className="font-mono text-xs text-gray-500">{item.productId}</span>
+      ),
     },
     {
-      header: "Nama Produk",
-      accessorKey: "name",
+      header: "Produk",
+      accessorKey: "productName",
       sortable: true,
+      cell: (item) => (
+        <span
+          className={`font-medium ${isCritical(item) ? "text-red-700" : "text-[#1C2B2A]"}`}
+        >
+          {item.productName}
+        </span>
+      ),
     },
     {
       header: "Kategori",
       accessorKey: "category",
       sortable: true,
-      cell: (p) => <Badge variant="neutral">{p.category}</Badge>,
+      cell: (item) => <Badge variant="info">{item.category}</Badge>,
     },
     {
-      header: "Harga",
-      accessorKey: "price",
+      header: "Stok Saat Ini",
+      accessorKey: "currentStock",
       sortable: true,
-      cell: (p) => (
-        <span className="font-mono text-xs text-gray-700 font-bold">
-          Rp {p.price.toLocaleString("id-ID")}
-        </span>
+      cell: (item) => {
+        const critical = isCritical(item);
+        return (
+          <span
+            className={`font-bold text-sm ${critical ? "text-red-600" : "text-[#0E5C57]"}`}
+          >
+            {item.currentStock}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Ambang Min.",
+      accessorKey: "minThreshold",
+      sortable: true,
+      cell: (item) => (
+        <span className="text-sm text-gray-600">{item.minThreshold}</span>
       ),
     },
     {
-      header: "Stok Aktif",
-      accessorKey: "stock",
-      sortable: true,
-      cell: (p) => {
-        if (editingId === p.id) {
-          return (
-            <input
-              type="number"
-              value={editStock}
-              onChange={(e) => setEditStock(Number(e.target.value))}
-              className="w-16 px-1.5 py-1 border border-gray-300 rounded text-center font-mono font-bold focus:outline-none focus:border-brand-teal text-sm bg-white"
-            />
-          );
-        }
-        return <span className="font-mono text-sm font-extrabold">{p.stock}</span>;
-      },
-    },
-    {
-      header: "Safety Stock (Min)",
-      accessorKey: "minStock",
-      sortable: true,
-      cell: (p) => {
-        if (editingId === p.id) {
-          return (
-            <input
-              type="number"
-              value={editMinStock}
-              onChange={(e) => setEditMinStock(Number(e.target.value))}
-              className="w-16 px-1.5 py-1 border border-gray-300 rounded text-center font-mono font-bold focus:outline-none focus:border-brand-teal text-sm bg-white"
-            />
-          );
-        }
-        return <span className="font-mono text-sm text-gray-400 font-semibold">{p.minStock}</span>;
-      },
-    },
-    {
       header: "Status",
-      accessorKey: "stock",
-      cell: (p) => {
-        const isCritical = p.stock <= p.minStock;
-        return (
-          <Badge variant={isCritical ? "danger" : "success"}>
-            {isCritical ? "Perlu Restock" : "Aman"}
-          </Badge>
+      accessorKey: "currentStock",
+      cell: (item) => {
+        return isCritical(item) ? (
+          <Badge variant="danger">⚠ Kritis</Badge>
+        ) : (
+          <Badge variant="success">Aman</Badge>
         );
       },
     },
     {
       header: "Aksi",
       accessorKey: "id",
-      cell: (p) => {
-        if (loadingId === p.id) {
-          return <span className="text-xs text-gray-400 font-medium animate-pulse">Menyimpan...</span>;
-        }
-
-        if (editingId === p.id) {
-          return (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => handleSave(p.id)}
-                className="p-1.5 bg-teal-50 text-brand-teal hover:bg-brand-teal hover:text-white rounded-lg transition-colors cursor-pointer"
-                title="Simpan"
-              >
-                <Check className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setEditingId(null)}
-                className="p-1.5 bg-gray-100 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
-                title="Batal"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          );
-        }
-
+      cell: (item) => {
         return (
           <button
-            onClick={() => startEditing(p)}
-            className="p-1.5 text-gray-400 hover:text-brand-teal hover:bg-teal-50 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-xs font-semibold"
+            onClick={() =>
+              setEditingId(editingId === item.id ? null : item.id)
+            }
+            className={`text-sm font-medium px-3 py-1 rounded-md transition-colors ${
+              editingId === item.id
+                ? "bg-gray-100 text-gray-700"
+                : "bg-teal-50 text-[#0E5C57] hover:bg-teal-100"
+            }`}
           >
-            <Edit2 className="h-3.5 w-3.5" />
-            Edit
+            {editingId === item.id ? "Tutup" : "Edit"}
           </button>
         );
       },
     },
   ];
 
+  // Custom render to inject edit row after the active row
+  // We'll use a simpler approach: wrap DataTable and append edit rows below
   return (
-    <div className="space-y-6">
-      {/* Tombol Tambah & Dialog Form */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold text-gray-900 tracking-tight">Daftar Stok Produk</h2>
-        <Button variant="primary" size="sm" onClick={() => setShowAddForm(!showAddForm)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          {showAddForm ? "Tutup Form" : "Tambah Produk"}
-        </Button>
-      </div>
-
-      {showAddForm && (
-        <Card className="max-w-2xl border border-brand-teal/10 shadow-sm animate-fade-in bg-teal-50/5">
-          <h3 className="font-bold text-base text-gray-900 mb-4 pb-2 border-b">Tambah Produk Baru</h3>
-          <form onSubmit={handleAddProduct} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Kode Produk</label>
-              <input
-                type="text"
-                required
-                placeholder="misal: 457"
-                value={newProductId}
-                onChange={(e) => setNewProductId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-teal"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nama Produk</label>
-              <input
-                type="text"
-                required
-                placeholder="misal: Wheat Flour"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-teal"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Kategori</label>
-              <input
-                type="text"
-                required
-                placeholder="misal: Grains & Staples"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-teal"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Harga (Rp)</label>
-              <input
-                type="number"
-                required
-                value={newPrice}
-                onChange={(e) => setNewPrice(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-teal"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Stok Awal</label>
-              <input
-                type="number"
-                required
-                value={newStock}
-                onChange={(e) => setNewStock(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-teal"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Safety Stock (Min)</label>
-              <input
-                type="number"
-                required
-                value={newMinStock}
-                onChange={(e) => setNewMinStock(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-teal"
-              />
-            </div>
-            <div className="sm:col-span-3 flex justify-end gap-2 pt-2 border-t mt-2">
-              <Button type="button" variant="secondary" size="sm" onClick={() => setShowAddForm(false)}>
-                Batal
-              </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={submitting}>
-                {submitting ? "Menyimpan..." : "Simpan Produk"}
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-
-      {products.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center py-20 text-center text-gray-400">
-          <Package className="h-12 w-12 text-gray-200 mb-3" />
-          <p className="font-bold text-gray-700">Belum ada produk terdaftar</p>
-          <p className="text-sm mt-1 text-gray-400">Gunakan form di atas untuk menambahkan produk ritel.</p>
-        </Card>
-      ) : (
-        <DataTable
-          data={products}
-          columns={columns}
-          searchPlaceholder="Cari nama produk atau kategori..."
-          searchKey="name"
-          pageSize={10}
-        />
-      )}
+    <div className="space-y-4">
+      {/* Edit panel (muncul di atas tabel ketika ada yang di-edit) */}
+      {editingId && (() => {
+        const item = items.find((i) => i.id === editingId);
+        if (!item) return null;
+        return (
+          <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex flex-wrap items-center gap-4">
+            <span className="font-medium text-[#1C2B2A] text-sm">
+              Edit: <strong>{item.productName}</strong>
+            </span>
+            <EditRowPanel item={item} onClose={() => setEditingId(null)} />
+          </div>
+        );
+      })()}
+      <DataTable
+        data={items}
+        columns={columns}
+        searchKey="productName"
+        searchPlaceholder="Cari produk…"
+      />
     </div>
+  );
+}
+
+function EditRowPanel({
+  item,
+  onClose,
+}: {
+  item: StockItem;
+  onClose: () => void;
+}) {
+  const [vals, setVals] = useState<EditState>({
+    currentStock: item.currentStock,
+    minThreshold: item.minThreshold,
+  });
+  const [isPending, startTransition] = useTransition();
+
+  function handleSave() {
+    startTransition(async () => {
+      await updateStock(item.id, vals.currentStock, vals.minThreshold);
+      onClose();
+    });
+  }
+
+  return (
+    <>
+      <label className="flex items-center gap-2 text-sm text-[#1C2B2A]">
+        Stok saat ini:
+        <input
+          type="number"
+          min={0}
+          value={vals.currentStock}
+          onChange={(e) =>
+            setVals((v) => ({
+              ...v,
+              currentStock: Math.max(0, Number(e.target.value)),
+            }))
+          }
+          className="w-24 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-[#1C2B2A]">
+        Ambang minimum:
+        <input
+          type="number"
+          min={0}
+          value={vals.minThreshold}
+          onChange={(e) =>
+            setVals((v) => ({
+              ...v,
+              minThreshold: Math.max(0, Number(e.target.value)),
+            }))
+          }
+          className="w-24 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+        />
+      </label>
+      <button
+        onClick={handleSave}
+        disabled={isPending}
+        className="bg-[#0E5C57] hover:bg-[#13837A] text-white text-sm font-medium px-4 py-1.5 rounded-md disabled:opacity-60 transition-colors"
+      >
+        {isPending ? "Menyimpan…" : "Simpan"}
+      </button>
+      <button
+        onClick={onClose}
+        className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-md border border-gray-200 hover:border-gray-400 transition-colors"
+      >
+        Batal
+      </button>
+    </>
   );
 }

@@ -10,13 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id          String   @id @default(uuid())
-  productId   String   @unique
-  name        String
-  category    String
-  price       Float
-  stock       Int      @default(0)
-  minStock    Int      @default(10)
-  lastUpdated DateTime @default(now()) @updatedAt
+model Stock {
+  id           String   @id @default(uuid())
+  productId    String   @unique
+  productName  String
+  category     String
+  currentStock Int      @default(0)
+  minThreshold Int      @default(15)
+  updatedAt    DateTime @default(now()) @updatedAt
 }

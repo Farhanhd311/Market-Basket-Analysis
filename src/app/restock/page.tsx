@@ -1,55 +1,59 @@
 import { AlertTriangle } from "lucide-react";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, StatCard } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { seedProductsIfEmpty, buildBaskets } from "@/lib/data";
-import RestockClient from "@/components/RestockClient";
+import { seedStockIfEmpty } from "@/lib/data";
+import RestockPageClient from "@/components/RestockPageClient";
+import { ShieldAlert, TrendingDown, BarChart2 } from "lucide-react";
 
-export const revalidate = 0; // Pastikan data dinamis
+export const dynamic = "force-dynamic";
 
 export default async function RestockPage() {
-  // Seeding otomatis database jika kosong
-  await seedProductsIfEmpty();
+  await seedStockIfEmpty();
 
-  // Ambal data produk dari database SQLite via Prisma
-  const dbProducts = await prisma.product.findMany();
+  const stocks = await prisma.stock.findMany({ orderBy: { productName: "asc" } });
 
-  // Hitung jumlah transaksi per produk untuk menghitung support individual
-  const baskets = buildBaskets();
-  const totalBaskets = Math.max(1, baskets.length);
-  const productSalesMap = new Map<string, number>();
-
-  baskets.forEach((b) => {
-    b.items.forEach((item) => {
-      productSalesMap.set(item, (productSalesMap.get(item) ?? 0) + 1);
-    });
-  });
-
-  // Gabungkan info database dengan support penjualan riil dari CSV
-  const productsWithSupport = dbProducts.map((p) => {
-    const salesCount = productSalesMap.get(p.name) ?? 0;
-    const support = salesCount / totalBaskets;
-
-    return {
-      id: p.id,
-      productId: p.productId,
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      stock: p.stock,
-      minStock: p.minStock,
-      support,
-      salesCount,
-    };
-  });
+  const total = stocks.length;
+  const critical = stocks.filter((s) => s.currentStock <= s.minThreshold).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
-        title="Prioritas Restock Barang"
-        desc="Daftar restock persediaan kritis ritel yang diurutkan secara cerdas berdasarkan tingkat kekurangan stok, popularitas (Support), dan pengaruh silang aturan asosiasi (Lift)."
-        icon={AlertTriangle}
+        icon={<AlertTriangle className="w-6 h-6" />}
+        title="Prioritas Restock"
+        description="Produk yang menjadi consequent aturan asosiasi ber-lift tinggi dan stoknya ≤ ambang minimum — diurutkan berdasarkan lift × kelangkaan."
       />
-      <RestockClient products={productsWithSupport} />
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <StatCard
+          title="Total Produk"
+          value={total}
+          icon={<BarChart2 className="w-5 h-5" />}
+          color="teal"
+        />
+        <StatCard
+          title="Stok Kritis"
+          value={critical}
+          icon={<ShieldAlert className="w-5 h-5" />}
+          color="amber"
+          description="Stok ≤ ambang minimum"
+        />
+        <StatCard
+          title="Rasio Kritis"
+          value={`${total > 0 ? Math.round((critical / total) * 100) : 0}%`}
+          icon={<TrendingDown className="w-5 h-5" />}
+          color="amber"
+        />
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        {/* 
+          RestockPageClient adalah client component yang:
+          1. Membaca rules dari localStorage (hasil run Apriori terakhir)
+          2. Memanggil computeRestockPriority(rules, stocks) dari stockPriority.ts
+          3. Menampilkan daftar prioritas dengan alasan + ekspor CSV
+        */}
+        <RestockPageClient stocks={stocks} />
+      </div>
     </div>
   );
 }

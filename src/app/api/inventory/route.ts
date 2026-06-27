@@ -4,48 +4,47 @@ import { prisma } from "@/lib/db";
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, stock, minStock } = body;
+    const { id, currentStock, minThreshold } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "Missing product id" }, { status: 400 });
+      return NextResponse.json({ error: "Missing stock item id" }, { status: 400 });
     }
 
-    const updated = await prisma.product.update({
+    const updated = await prisma.stock.update({
       where: { id },
       data: {
-        stock: typeof stock === "number" ? stock : undefined,
-        minStock: typeof minStock === "number" ? minStock : undefined,
+        currentStock: typeof currentStock === "number" ? currentStock : undefined,
+        minThreshold: typeof minThreshold === "number" ? minThreshold : undefined,
       },
     });
 
     return NextResponse.json(updated);
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Gagal memperbarui produk" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Gagal memperbarui stok" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { productId, name, category, price, stock, minStock } = body;
+    const { productId, productName, category, currentStock, minThreshold } = body;
 
-    if (!productId || !name || !category || typeof price !== "number") {
+    if (!productId || !productName || !category) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const created = await prisma.product.create({
+    const created = await prisma.stock.create({
       data: {
         productId,
-        name,
+        productName,
         category,
-        price,
-        stock: stock || 0,
-        minStock: minStock || 15,
+        currentStock: currentStock || 0,
+        minThreshold: minThreshold || 15,
       },
     });
 
     return NextResponse.json(created);
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Gagal menambahkan produk" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Gagal menambahkan stok" }, { status: 500 });
   }
 }
