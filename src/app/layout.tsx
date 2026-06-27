@@ -17,8 +17,50 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="h-full">
-      <body className={`${inter.className} h-full bg-brand-bg text-brand-text flex overflow-hidden`}>
+    <html lang="id" className="h-full" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const removeAttr = (el) => {
+                  if (el && el.removeAttribute) {
+                    el.removeAttribute('bis_skin_checked');
+                    el.removeAttribute('bis_register');
+                  }
+                };
+                
+                // Observe DOM to strip injected attributes instantly
+                const observer = new MutationObserver((mutations) => {
+                  for (const mutation of mutations) {
+                    if (mutation.type === 'attributes' && (mutation.attributeName === 'bis_skin_checked' || mutation.attributeName === 'bis_register')) {
+                      removeAttr(mutation.target);
+                    }
+                    if (mutation.type === 'childList') {
+                      mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) {
+                          if (node.hasAttribute && (node.hasAttribute('bis_skin_checked') || node.hasAttribute('bis_register'))) {
+                            removeAttr(node);
+                          }
+                          node.querySelectorAll('[bis_skin_checked], [bis_register]').forEach(removeAttr);
+                        }
+                      });
+                    }
+                  }
+                });
+                
+                observer.observe(document.documentElement, {
+                  childList: true,
+                  subtree: true,
+                  attributes: true,
+                  attributeFilter: ['bis_skin_checked', 'bis_register']
+                });
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className={`${inter.className} h-full bg-brand-bg text-brand-text flex overflow-hidden`} suppressHydrationWarning>
         <AnalysisProvider>
           <Sidebar />
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

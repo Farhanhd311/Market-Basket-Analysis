@@ -58,7 +58,19 @@ export default function DashboardClient({
   // Data 5 aturan teratas berdasarkan lift untuk mini bar chart
   const chartData = useMemo(() => {
     if (!isMined || rules.length === 0) return [];
-    return rules
+
+    // Deduplicate rules by item sets to avoid showing both A -> B and B -> A
+    const seen = new Set<string>();
+    const uniqueRules: AssociationRule[] = [];
+    for (const r of rules) {
+      const key = [...r.antecedent, ...r.consequent].sort().join(",");
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueRules.push(r);
+      }
+    }
+
+    return uniqueRules
       .slice(0, 5)
       .map((r, idx) => ({
         name: `R${idx + 1}`,
@@ -110,7 +122,7 @@ export default function DashboardClient({
 
     // 5. PRIORITAS RESTOCK
     csvContent += "=== PRIORITAS RESTOCK BARANG (BERDASARKAN HUBUNGAN SILANG ATURAN LIFT TINGGI & STOK KRITIS) ===\n";
-    csvContent += "Peringkat,Nama Produk,Kategori,Stok Saat Ini,Ambang Batas Minimum,Lift Aturan Terkait,Skor Prioritas,Alasan Analitis\n";
+    csvContent += "Peringkat,Nama Produk,Kategori,Stok Saat Ini,Batas Aman,Kekuatan Hubungan (Lift),Skor Prioritas,Alasan\n";
     if (isMined && restockPriorities.length > 0) {
       restockPriorities.forEach((p, idx) => {
         csvContent += `${idx + 1},"${p.productName}","${p.category}",${p.currentStock},${p.minThreshold},${p.maxLift.toFixed(3)},${p.score.toFixed(4)},"${p.reason.replace(/"/g, '""')}"\n`;
@@ -118,7 +130,7 @@ export default function DashboardClient({
     } else if (!isMined) {
       csvContent += "Status,Jalankan analisis Apriori terlebih dahulu untuk menghitung keterkaitan produk.\n";
     } else {
-      csvContent += "Status,Seluruh stok produk consequent aman di atas ambang minimum.\n";
+      csvContent += "Status,Seluruh stok produk aman di atas batas aman.\n";
     }
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -154,11 +166,11 @@ export default function DashboardClient({
       variant: "gray" as const,
     },
     {
-      title: "Aturan Signifikan Ritel",
+      title: "Koneksi Produk Erat",
       value: isMined ? significantRulesCount.toLocaleString("id-ID") : "0",
       desc: isMined
-        ? `Dari total ${rules.length} aturan (Lift >= 1.5)`
-        : "Jalankan analisis Apriori",
+        ? `Menemukan ${rules.length} pola perilaku belanja`
+        : "Jalankan analisis pola belanja",
       icon: Award,
       variant: "amber" as const,
     },
@@ -166,8 +178,8 @@ export default function DashboardClient({
 
   const quickActions = [
     {
-      title: "Analisis Apriori",
-      desc: "Atur parameter minimum support dan confidence untuk memproses dataset transaksi ritel.",
+      title: "Analisis Pola Belanja",
+      desc: "Cari tahu pola barang yang sering dibeli bersamaan dari data transaksi kasir.",
       icon: TrendingUp,
       href: "/analysis",
       color: "bg-teal-50 text-brand-teal border-teal-100",
@@ -175,15 +187,15 @@ export default function DashboardClient({
     },
     {
       title: "Rekomendasi Bundling",
-      desc: "Optimalkan strategi cross-selling menggunakan paket bundling produk ritel ber-Lift tertinggi.",
+      desc: "Gunakan rekomendasi paket bundling produk ritel untuk meningkatkan omzet penjualan.",
       icon: Sparkles,
       href: "/recommendations",
       color: "bg-amber-50 text-brand-amber border-amber-100",
       cta: "Lihat Rekomendasi",
     },
     {
-      title: "Prioritas Restock",
-      desc: "Tentukan prioritas restock produk kritis ritel berdasarkan aturan asosiasi dan status persediaan.",
+      title: "Prioritas Pengisian Stok",
+      desc: "Rencanakan pengisian stok produk berdasarkan tingkat kelangkaan barang dan pola belanja konsumen.",
       icon: AlertTriangle,
       href: "/restock",
       color: "bg-teal-50 text-brand-teal border-teal-100",
@@ -201,9 +213,9 @@ export default function DashboardClient({
             Dashboard Market Basket Analysis
           </h1>
           <p className="text-gray-600 leading-relaxed text-sm">
-            Solusi integrasi data logistik Supply Chain Management ritel. Algoritma Apriori memetakan
-            korelasi pembelian untuk memicu bundling produk terlaris serta menyusun urutan restock
-            stok kritis berdasarkan nilai pengaruh pasar.
+            Solusi integrasi data logistik Supply Chain Management ritel. Sistem ini menganalisis
+            kebiasaan belanja pelanggan untuk membuat rekomendasi paket bundling produk terlaris,
+            serta merekomendasikan prioritas pengisian stok barang berdasarkan keterkaitan penjualan.
           </p>
         </div>
         <div className="shrink-0">
@@ -238,10 +250,10 @@ export default function DashboardClient({
           <div className="border-b pb-3 mb-4 flex justify-between items-center">
             <div>
               <h2 className="text-base font-bold text-gray-900 tracking-tight">
-                Top 5 Aturan Asosiasi Terkuat
+                Top 5 Hubungan Produk Tererat
               </h2>
               <p className="text-xs text-gray-400">
-                Peringkat aturan berdasarkan rasio pengaruh (Lift Ratio) tertinggi
+                Peringkat pasangan barang yang paling sering dibeli secara bersamaan
               </p>
             </div>
             {isMined && (
@@ -255,9 +267,9 @@ export default function DashboardClient({
           {!isMined || chartData.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
               <span className="text-3xl mb-2">📊</span>
-              <h4 className="text-sm font-semibold text-gray-700">Belum Ada Aturan Terbentuk</h4>
+              <h4 className="text-sm font-semibold text-gray-700">Belum Ada Pola Belanja Teranalisis</h4>
               <p className="text-xs text-gray-400 max-w-[280px] mt-1">
-                Jalankan modul Apriori di halaman Analisis untuk melihat representasi grafis aturan di sini.
+                Jalankan modul analisis di halaman Analisis Pola Belanja untuk melihat representasi grafis di sini.
               </p>
             </div>
           ) : (
@@ -272,10 +284,10 @@ export default function DashboardClient({
                         const data = payload[0].payload;
                         return (
                           <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-md text-xs space-y-1">
-                            <p className="font-bold text-[#1C2B2A]">{data.fullName}</p>
-                            <p className="text-[#0E5C57]">Lift Ratio: <strong>{data.lift}</strong></p>
-                            <p className="text-gray-500">Support: <strong>{data.support}%</strong></p>
-                            <p className="text-gray-500">Confidence: <strong>{data.confidence}%</strong></p>
+                            <p className="font-bold text-[#1C2B2A] mb-1.5 border-b pb-1 border-gray-150">{data.fullName}</p>
+                            <p className="text-[#0E5C57]">Kekuatan Keterkaitan: <strong>{data.lift}x lebih erat</strong></p>
+                            <p className="text-gray-500">Kekerapan Kombinasi: <strong>{data.support}% dari total belanja</strong></p>
+                            <p className="text-gray-500">Tingkat Keyakinan: <strong>{data.confidence}% kemungkinan beli bersama</strong></p>
                           </div>
                         );
                       }
@@ -291,10 +303,10 @@ export default function DashboardClient({
               </ResponsiveContainer>
               <div className="flex justify-center gap-4 text-[10px] text-gray-400 font-medium mt-1">
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 bg-[#E8A13A] rounded" /> Nilai Terkaku (Rank 1)
+                  <span className="w-2.5 h-2.5 bg-[#E8A13A] rounded" /> Hubungan Terkuat (Peringkat 1)
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 bg-[#0E5C57] rounded" /> Aturan Signifikan Lainnya
+                  <span className="w-2.5 h-2.5 bg-[#0E5C57] rounded" /> Hubungan Erat Lainnya
                 </span>
               </div>
             </div>

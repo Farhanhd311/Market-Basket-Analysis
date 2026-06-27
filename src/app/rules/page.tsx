@@ -5,6 +5,7 @@ import { Award, ArrowRight, BarChart3, Share2 } from "lucide-react";
 import { PageHeader, Card, EmptyState, Button } from "@/components/ui";
 import { useAnalysis } from "@/context/AnalysisContext";
 import NetworkGraph from "@/components/NetworkGraph";
+import type { AssociationRule } from "@/types";
 import {
   BarChart,
   Bar,
@@ -32,11 +33,23 @@ export default function RulesPage() {
     return rules.filter((r) => isSameCategory([...r.antecedent, ...r.consequent]));
   }, [rules, strictCategory, summary?.categoryMap]);
 
-  // 10 Aturan dengan Lift Tertinggi
+  // 10 Aturan dengan Lift Tertinggi (Dideduplikasi untuk menghindari bolak-balik A->B dan B->A)
   const chartData = useMemo(() => {
     if (filteredRules.length === 0) return [];
-    return [...filteredRules]
-      .sort((a, b) => b.lift - a.lift)
+    const sorted = [...filteredRules].sort((a, b) => b.lift - a.lift);
+    
+    // Deduplicate rules by item sets to avoid showing both A -> B and B -> A
+    const seen = new Set<string>();
+    const uniqueRules: AssociationRule[] = [];
+    for (const r of sorted) {
+      const key = [...r.antecedent, ...r.consequent].sort().join(",");
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueRules.push(r);
+      }
+    }
+
+    return uniqueRules
       .slice(0, 10)
       .map((r, idx) => {
         const sourceStr = r.antecedent.join(",");
@@ -106,7 +119,7 @@ export default function RulesPage() {
             <BarChart3 className="h-5 w-5 text-brand-teal" />
             <div>
               <h3 className="font-bold text-base text-gray-900">Top 10 Aturan (Lift Terkuat)</h3>
-              <p className="text-xs text-gray-400">Aturan asosiasi dengan kekuatan keterikatan (Lift Ratio) tertinggi.</p>
+              <p className="text-xs text-gray-400">Peringkat pasangan barang yang paling sering dibeli secara bersamaan.</p>
             </div>
           </div>
           
@@ -138,9 +151,9 @@ export default function RulesPage() {
                       return (
                         <div className="bg-white p-3.5 border border-gray-100 rounded-xl shadow-lg text-xs space-y-1">
                           <p className="font-bold text-brand-teal mb-1 border-b pb-1.5">{data.fullName}</p>
-                          <p><span className="text-gray-400 font-medium">Lift Ratio:</span> <strong className="text-brand-amber font-extrabold">{data.lift}</strong></p>
-                          <p><span className="text-gray-400 font-medium">Support:</span> <strong className="text-gray-700">{data.supportPct}%</strong></p>
-                          <p><span className="text-gray-400 font-medium">Confidence:</span> <strong className="text-gray-700">{data.confidencePct}%</strong></p>
+                          <p><span className="text-gray-400 font-medium">Kekuatan Hubungan (Lift):</span> <strong className="text-brand-amber font-extrabold">{data.lift}x</strong></p>
+                          <p><span className="text-gray-400 font-medium">Kekerapan Kombinasi (Support):</span> <strong className="text-gray-700">{data.supportPct}%</strong></p>
+                          <p><span className="text-gray-400 font-medium">Peluang Beli Bersama (Confidence):</span> <strong className="text-gray-700">{data.confidencePct}%</strong></p>
                         </div>
                       );
                     }

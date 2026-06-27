@@ -25,7 +25,7 @@ export default async function InventoryPage() {
       <PageHeader
         icon={<Package className="w-6 h-6" />}
         title="Manajemen Stok"
-        description={`${total} produk terdaftar — edit stok dan ambang minimum secara langsung`}
+        description={`${total} produk terdaftar — perbarui stok dan batas aman stok secara langsung`}
       />
 
       {/* Stat Cards */}
@@ -41,7 +41,7 @@ export default async function InventoryPage() {
           value={critical}
           icon={<AlertTriangle className="w-5 h-5" />}
           color="amber"
-          description="Stok ≤ ambang minimum"
+          description="Stok di bawah batas aman"
         />
         <StatCard
           title="Stok Aman"

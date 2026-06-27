@@ -260,7 +260,7 @@ export default function RecommendationsPage() {
           </label>
           
           <div className="flex items-center gap-3 bg-gray-50 px-4 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold">
-            <span className="text-gray-500">Ambang Batas Lift &ge;</span>
+            <span className="text-gray-500">Min. Kekuatan Hubungan (Lift) &ge;</span>
             <input
               type="number"
               min="0.5"
@@ -310,11 +310,11 @@ export default function RecommendationsPage() {
                     </div>
                     <div className="mt-5 pt-3 border-t border-gray-50 flex justify-between items-center text-xs">
                       <div>
-                        <span className="text-gray-400 font-medium block">Support (Kekerapan)</span>
+                        <span className="text-gray-400 font-medium block">Popularitas Paket (Support)</span>
                         <strong className="text-gray-700 font-bold">{(rec.support * 100).toFixed(2)}%</strong>
                       </div>
                       <div className="text-right">
-                        <span className="text-gray-400 font-medium block">Lift Ratio</span>
+                        <span className="text-gray-400 font-medium block">Kekuatan Hubungan (Lift)</span>
                         <strong className="text-brand-amber font-extrabold">{rec.lift.toFixed(3)}</strong>
                       </div>
                     </div>
@@ -367,11 +367,11 @@ export default function RecommendationsPage() {
                     </div>
                     <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center text-xs">
                       <div>
-                        <span className="text-gray-400 font-medium block">Confidence (Kepercayaan)</span>
+                        <span className="text-gray-400 font-medium block">Peluang Beli Bersama (Confidence)</span>
                         <strong className="text-gray-750 font-bold">{(rec.confidence * 100).toFixed(1)}%</strong>
                       </div>
                       <div className="text-right">
-                        <span className="text-gray-400 font-medium block">Lift Ratio</span>
+                        <span className="text-gray-400 font-medium block">Kekuatan Hubungan (Lift)</span>
                         <strong className="text-brand-amber font-extrabold">{rec.lift.toFixed(3)}</strong>
                       </div>
                     </div>
@@ -416,11 +416,11 @@ export default function RecommendationsPage() {
                     </div>
                     <div className="mt-5 pt-3 border-t border-gray-50 flex justify-between items-center text-xs">
                       <div>
-                        <span className="text-gray-400 font-medium block">Support Hubungan</span>
+                        <span className="text-gray-400 font-medium block">Popularitas Hubungan (Support)</span>
                         <strong className="text-gray-700 font-bold">{(rec.support * 100).toFixed(2)}%</strong>
                       </div>
                       <div className="text-right">
-                        <span className="text-gray-400 font-medium block">Lift Ratio</span>
+                        <span className="text-gray-400 font-medium block">Kekuatan Hubungan (Lift)</span>
                         <strong className="text-brand-amber font-extrabold">{rec.lift.toFixed(3)}</strong>
                       </div>
                     </div>

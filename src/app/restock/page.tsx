@@ -20,7 +20,7 @@ export default async function RestockPage() {
       <PageHeader
         icon={<AlertTriangle className="w-6 h-6" />}
         title="Prioritas Restock"
-        description="Produk yang menjadi consequent aturan asosiasi ber-lift tinggi dan stoknya ≤ ambang minimum — diurutkan berdasarkan lift × kelangkaan."
+        description="Rekomendasi prioritas pengisian ulang (restok) produk yang stoknya menipis, dihitung dari seberapa sering produk dibeli bersamaan dengan produk laris lainnya."
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -35,7 +35,7 @@ export default async function RestockPage() {
           value={critical}
           icon={<ShieldAlert className="w-5 h-5" />}
           color="amber"
-          description="Stok ≤ ambang minimum"
+          description="Stok di bawah batas aman"
         />
         <StatCard
           title="Rasio Kritis"

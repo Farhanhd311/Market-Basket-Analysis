@@ -89,9 +89,8 @@ export function computeRestockPriority(
     // Bangun alasan yang informatif
     const antecedentStr = rule.antecedent.join(", ");
     const reason =
-      `Terkait produk laris [${antecedentStr}] via aturan [${antecedentStr} → ${rule.consequent.join(", ")}], ` +
-      `lift=${rule.lift.toFixed(3)} (conf=${(rule.confidence * 100).toFixed(1)}%); ` +
-      `stok ${stock.productName} = ${stock.currentStock} ≤ ambang ${stock.minThreshold}`;
+      `Sering dibeli bersama dengan [${antecedentStr}] (peluang dibeli bersama: ${(rule.confidence * 100).toFixed(1)}%). ` +
+      `Disarankan segera restok agar ketersediaan paket penjualan tetap terjaga.`;
 
     priorities.push({
       productName: stock.productName,

@@ -73,12 +73,12 @@ export default function AnalysisPage() {
   const handleExportCSV = () => {
     if (rules.length === 0) return;
 
-    const headers = ["Antecedent (Jika Beli)", "Consequent (Maka Beli)", "Support (%)", "Confidence (Kepercayaan)", "Lift (Kekuatan Hubungan)"];
+    const headers = ["Jika Pelanggan Membeli (Antecedent)", "Maka Tawarkan (Consequent)", "Kekerapan Kombinasi (Support %)", "Peluang Beli Bersama (Confidence %)", "Kekuatan Hubungan (Lift Ratio)"];
     const rows = rules.map(r => [
       `"${r.antecedent.join(", ")}"`,
       `"${r.consequent.join(", ")}"`,
       (r.support * 100).toFixed(4),
-      r.confidence.toFixed(4),
+      (r.confidence * 100).toFixed(2),
       r.lift.toFixed(4)
     ]);
 
@@ -110,7 +110,7 @@ export default function AnalysisPage() {
 
   const columns: Column<TableRuleRow>[] = [
     {
-      header: "Antecedent (Jika Beli)",
+      header: "Jika Pelanggan Membeli",
       accessorKey: "antecedentStr",
       cell: (r) => (
         <div className="flex flex-wrap gap-1 font-semibold text-gray-800">
@@ -123,7 +123,7 @@ export default function AnalysisPage() {
       ),
     },
     {
-      header: "Consequent (Maka Beli)",
+      header: "Maka Tawarkan Produk",
       accessorKey: "consequentStr",
       cell: (r) => (
         <div className="flex flex-wrap gap-1 font-semibold text-gray-800">
@@ -136,7 +136,7 @@ export default function AnalysisPage() {
       ),
     },
     {
-      header: "Support (%)",
+      header: "Kekerapan Kombinasi (Support)",
       accessorKey: "support",
       sortable: true,
       cell: (r) => (
@@ -146,17 +146,17 @@ export default function AnalysisPage() {
       ),
     },
     {
-      header: "Confidence",
+      header: "Peluang Beli Bersama (Confidence)",
       accessorKey: "confidence",
       sortable: true,
       cell: (r) => (
         <span className="font-mono text-sm text-gray-700 font-bold">
-          {r.confidence.toFixed(3)}
+          {(r.confidence * 100).toFixed(1)}%
         </span>
       ),
     },
     {
-      header: "Lift Ratio",
+      header: "Kekuatan Hubungan (Lift)",
       accessorKey: "lift",
       sortable: true,
       cell: (r) => {

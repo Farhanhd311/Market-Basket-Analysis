@@ -16,6 +16,9 @@ async function main() {
     process.exit(1);
   }
 
+  console.log("Membersihkan tabel Stock...");
+  await prisma.stock.deleteMany();
+
   const raw = fs.readFileSync(CSV_PATH, "utf-8");
   const result = Papa.parse<Record<string, string>>(raw, {
     header: true,

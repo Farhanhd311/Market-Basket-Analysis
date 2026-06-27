@@ -5,7 +5,7 @@ import type { RestockPriority } from "@/lib/stockPriority";
 import { Badge } from "@/components/ui";
 
 function exportCsv(data: RestockPriority[]) {
-  const header = "Produk,Kategori,Stok Saat Ini,Ambang Min.,Kekurangan,Lift Maks.,Skor,Alasan\n";
+  const header = "Produk,Kategori,Stok Saat Ini,Batas Aman,Kekurangan Stok,Kekuatan Hubungan (Lift),Prioritas Restok,Alasan\n";
   const rows = data
     .map(
       (p) =>
@@ -71,8 +71,7 @@ export default function RestockPriorityClient({
           Semua Stok Prioritas Aman
         </h3>
         <p className="text-gray-500 text-sm max-w-sm">
-          Tidak ada produk consequent dari aturan asosiasi yang memiliki stok di
-          bawah ambang minimum.
+          Tidak ada produk yang sering dibeli bersamaan yang stoknya di bawah batas aman.
         </p>
       </div>
     );
@@ -128,18 +127,18 @@ export default function RestockPriorityClient({
                   {/* Metrik baris */}
                   <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-2">
                     <span>
-                      Stok:{" "}
+                      Stok Saat Ini:{" "}
                       <strong className="text-red-600">{p.currentStock}</strong>{" "}
-                      / Ambang: <strong>{p.minThreshold}</strong>
+                      / Batas Aman: <strong>{p.minThreshold}</strong>
                     </span>
                     <span>
-                      Kekurangan: <strong>{p.deficiency}</strong> unit
+                      Jumlah Kurang: <strong>{p.deficiency}</strong> unit
                     </span>
                     <span>
-                      Lift maks: <strong>{p.maxLift.toFixed(3)}</strong>
+                      Kekuatan Hubungan (Lift): <strong>{p.maxLift.toFixed(2)}x</strong>
                     </span>
                     <span>
-                      Skor prioritas: <strong>{p.score.toFixed(4)}</strong>
+                      Prioritas Restok: <strong>{p.score.toFixed(2)}</strong>
                     </span>
                   </div>
 

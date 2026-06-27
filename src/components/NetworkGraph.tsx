@@ -49,9 +49,19 @@ export default function NetworkGraph({ rules }: NetworkGraphProps) {
   const [hoveredEdge, setHoveredEdge] = useState<EdgeData | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  // Ambil top 20 aturan untuk divisualisasikan agar graf tidak terlalu padat
+  // Ambil top 20 aturan untuk divisualisasikan agar graf tidak terlalu padat (dideduplikasi secara simetris)
   const topRules = useMemo(() => {
-    return [...rules].sort((a, b) => b.lift - a.lift).slice(0, 20);
+    const sorted = [...rules].sort((a, b) => b.lift - a.lift);
+    const seen = new Set<string>();
+    const uniqueRules: AssociationRule[] = [];
+    for (const r of sorted) {
+      const key = [...r.antecedent, ...r.consequent].sort().join(",");
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueRules.push(r);
+      }
+    }
+    return uniqueRules.slice(0, 20);
   }, [rules]);
 
   // Bangun node dan edge dari topRules
@@ -200,7 +210,7 @@ export default function NetworkGraph({ rules }: NetworkGraphProps) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h3 className="font-bold text-base text-gray-900">Graf Jaringan Ko-pembelian</h3>
-          <p className="text-xs text-gray-400">Node = Produk (ukuran &propto; koneksi), Garis = Pasangan dalam aturan (tebal &propto; Lift Ratio).</p>
+          <p className="text-xs text-gray-400">Lingkaran = Produk (semakin besar = semakin banyak hubungan), Garis = Pembelian bersama (semakin tebal = semakin sering dibeli bersama).</p>
         </div>
         {(selectedNode || hoveredNode || hoveredEdge) && (
           <button 
@@ -299,9 +309,9 @@ export default function NetworkGraph({ rules }: NetworkGraphProps) {
             <>
               <div className="font-bold text-brand-teal mb-1">Detail Hubungan:</div>
               <div><span className="font-semibold text-gray-500">Pasangan:</span> {hoveredEdge.source} &harr; {hoveredEdge.target}</div>
-              <div><span className="font-semibold text-gray-500">Support:</span> {(hoveredEdge.support * 100).toFixed(2)}%</div>
-              <div><span className="font-semibold text-gray-500">Confidence:</span> {(hoveredEdge.confidence * 100).toFixed(1)}%</div>
-              <div><span className="font-semibold text-gray-500 text-brand-amber">Lift Ratio:</span> <strong className="text-brand-amber">{hoveredEdge.lift.toFixed(3)}</strong></div>
+              <div><span className="font-semibold text-gray-500">Kekerapan Kombinasi (Support):</span> {(hoveredEdge.support * 100).toFixed(2)}%</div>
+              <div><span className="font-semibold text-gray-500">Peluang Beli Bersama (Confidence):</span> {(hoveredEdge.confidence * 100).toFixed(1)}%</div>
+              <div><span className="font-semibold text-gray-500 text-brand-amber">Kekuatan Hubungan (Lift):</span> <strong className="text-brand-amber">{hoveredEdge.lift.toFixed(3)}x</strong></div>
             </>
           ) : selectedNode || hoveredNode ? (
             (() => {
@@ -311,14 +321,14 @@ export default function NetworkGraph({ rules }: NetworkGraphProps) {
               return (
                 <>
                   <div className="font-bold text-brand-teal mb-1 truncate">{activeId}</div>
-                  <div><span className="font-semibold text-gray-500">Koneksi Aturan:</span> {activeNode?.count ?? 0} pasangan</div>
-                  <div><span className="font-semibold text-gray-500">Pasangan Terkait:</span></div>
+                  <div><span className="font-semibold text-gray-500">Jumlah Hubungan:</span> {activeNode?.count ?? 0} pasangan</div>
+                  <div><span className="font-semibold text-gray-500">Produk Terkait:</span></div>
                   <div className="flex flex-wrap gap-1 mt-1 max-h-16 overflow-y-auto">
                     {connections.map((c, i) => {
                       const peer = c.source === activeId ? c.target : c.source;
                       return (
                         <span key={i} className="bg-gray-100 text-gray-600 px-1 rounded-sm text-[8px] font-medium">
-                          {peer} (L: {c.lift.toFixed(1)})
+                          {peer} (Lift: {c.lift.toFixed(1)}x)
                         </span>
                       );
                     })}
@@ -327,7 +337,7 @@ export default function NetworkGraph({ rules }: NetworkGraphProps) {
               );
             })()
           ) : (
-            <div className="text-gray-400 font-medium italic">Sorot node produk atau garis hubungan untuk melihat metrik.</div>
+            <div className="text-gray-400 font-medium italic">Sorot produk atau garis hubungan untuk melihat detail analisis.</div>
           )}
         </div>
       </div>

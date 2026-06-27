@@ -61,7 +61,7 @@ function EditRow({
             />
           </label>
           <label className="flex items-center gap-2 text-sm text-[#1C2B2A]">
-            Ambang minimum:
+            Batas aman:
             <input
               type="number"
               min={0}
@@ -143,7 +143,7 @@ export default function InventoryClient({ items }: { items: StockItem[] }) {
       },
     },
     {
-      header: "Ambang Min.",
+      header: "Batas Aman",
       accessorKey: "minThreshold",
       sortable: true,
       cell: (item) => (
@@ -248,7 +248,7 @@ function EditRowPanel({
         />
       </label>
       <label className="flex items-center gap-2 text-sm text-[#1C2B2A]">
-        Ambang minimum:
+        Batas aman:
         <input
           type="number"
           min={0}
