@@ -1,50 +1,54 @@
 import Link from "next/link";
-import { 
-  Database, 
-  Package, 
-  Tags, 
-  Award, 
-  ArrowRight, 
-  TrendingUp, 
-  Sparkles, 
-  AlertTriangle 
+import {
+  Database,
+  Package,
+  Tags,
+  Award,
+  ArrowRight,
+  TrendingUp,
+  Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { getSummaryStats } from "@/lib/data";
 
 export default function Home() {
-  const stats = [
+  const stats = getSummaryStats();
+
+  const statCards = [
     {
       title: "Total Transaksi",
-      value: "1.991",
-      desc: "Transaksi terdaftar dari penjualan ritel",
+      value: stats.totalTransactions.toLocaleString("id-ID"),
+      desc: `${stats.dateRange.from} – ${stats.dateRange.to}`,
       icon: Database,
       variant: "teal" as const,
-      trend: { value: "+12.4%", label: "bulan ini", positive: true }
     },
     {
       title: "Total Produk",
-      value: "68",
-      desc: "Produk ritel aktif di sistem",
+      value: stats.totalProducts.toLocaleString("id-ID"),
+      desc: "Produk unik dalam dataset",
       icon: Package,
       variant: "teal" as const,
     },
     {
       title: "Kategori Produk",
-      value: "17",
+      value: stats.totalCategories.toLocaleString("id-ID"),
       desc: "Kategori produk terdaftar",
       icon: Tags,
       variant: "gray" as const,
     },
     {
-      title: "Aturan Signifikan",
-      value: "12",
-      desc: "Aturan asosiasi dengan Lift > 1.5",
+      title: "Rata-rata Item",
+      value: stats.avgItemsPerBasket.toLocaleString("id-ID"),
+      desc: "Item unik per keranjang belanja",
       icon: Award,
       variant: "amber" as const,
-      trend: { value: "100%", label: "validitas", positive: true }
-    }
+      trend: stats.topProduct
+        ? { value: stats.topProduct.name, label: `${stats.topProduct.count}×`, positive: true }
+        : undefined,
+    },
   ];
 
   const quickActions = [
@@ -54,7 +58,7 @@ export default function Home() {
       icon: TrendingUp,
       href: "/analysis",
       color: "bg-teal-50 text-brand-teal border-teal-100",
-      cta: "Mulai Analisis"
+      cta: "Mulai Analisis",
     },
     {
       title: "Rekomendasi Bundling",
@@ -62,7 +66,7 @@ export default function Home() {
       icon: Sparkles,
       href: "/recommendations",
       color: "bg-amber-50 text-brand-amber border-amber-100",
-      cta: "Lihat Bundling"
+      cta: "Lihat Bundling",
     },
     {
       title: "Prioritas Restock",
@@ -70,12 +74,12 @@ export default function Home() {
       icon: AlertTriangle,
       href: "/restock",
       color: "bg-teal-50 text-brand-teal border-teal-100",
-      cta: "Cek Stok Kritis"
-    }
+      cta: "Cek Stok Kritis",
+    },
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8">
       {/* Welcome Banner */}
       <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
         <div className="absolute right-0 top-0 w-64 h-64 bg-teal-50/50 rounded-full blur-3xl -z-10" />
@@ -83,52 +87,49 @@ export default function Home() {
           Dashboard Market Basket Analysis
         </h1>
         <p className="mt-2 text-gray-600 max-w-2xl leading-relaxed text-sm">
-          Solusi optimasi Supply Chain Management ritel berbasis data transaksi. 
-          Algoritma Apriori memetakan keterkaitan produk untuk meningkatkan penjualan silang (cross-selling) dan mengatur prioritas restock stok kritis secara otomatis.
+          Solusi optimasi Supply Chain Management ritel berbasis data transaksi. Algoritma Apriori
+          memetakan keterkaitan produk untuk meningkatkan penjualan silang (cross-selling) dan mengatur
+          prioritas restock stok kritis secara otomatis.
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* StatCard Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
+        {statCards.map((s, idx) => (
           <StatCard
             key={idx}
-            title={stat.title}
-            value={stat.value}
-            desc={stat.desc}
-            icon={stat.icon}
-            variant={stat.variant}
-            trend={stat.trend}
+            title={s.title}
+            value={s.value}
+            desc={s.desc}
+            icon={s.icon}
+            variant={s.variant}
+            trend={s.trend}
           />
         ))}
       </div>
 
-      {/* Main Sections */}
+      {/* Baris bawah */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Actions */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-              Aksi Cepat MBA
-            </h2>
-          </div>
-          
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Aksi Cepat MBA</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
-                <Card 
-                  key={idx} 
+                <Card
+                  key={idx}
                   className="flex flex-col justify-between hover:border-brand-teal-light/20 hover:shadow-md transition-all duration-300"
                 >
                   <div>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${action.color} mb-4`}>
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center border ${action.color} mb-4`}
+                    >
                       <Icon className="h-5 w-5" />
                     </div>
                     <h3 className="font-bold text-gray-900 text-base">{action.title}</h3>
                     <p className="mt-1.5 text-xs text-gray-500 leading-relaxed">{action.desc}</p>
                   </div>
-                  
                   <div className="mt-6">
                     <Link href={action.href} className="w-full">
                       <Button variant="ghost" size="sm" className="w-full justify-between group px-2 text-xs">
@@ -143,50 +144,37 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Info Card */}
-        <div className="lg:col-span-1">
-          <div className="h-full flex flex-col justify-between bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 tracking-tight border-b pb-3 mb-4">
-                Metodologi Analisis
-              </h2>
-              
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[10px] font-bold text-brand-teal shrink-0">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-800">Support (Dukungan)</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Seberapa sering kombinasi produk muncul dalam seluruh keranjang transaksi ritel.</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-[10px] font-bold text-brand-teal shrink-0">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-800">Confidence (Keyakinan)</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Kekuatan hubungan searah. Seberapa sering produk B dibeli jika produk A telah dibeli.</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center text-[10px] font-bold text-brand-amber shrink-0">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-800">Lift (Kekuatan Aturan)</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Metrik utama penentu validitas. Jika Lift &gt; 1, hubungan bersifat positif dan signifikan.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 pt-4 border-t border-gray-50 text-[11px] text-gray-400 font-medium text-center">
-              Apriori menggunakan ranking Lift tertinggi untuk menyusun rekomendasi bundling produk ritel.
-            </div>
+        {/* Top Kategori */}
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+          <h2 className="text-lg font-bold text-gray-900 tracking-tight border-b pb-3 mb-4">
+            Top 7 Kategori Terlaris
+          </h2>
+          {stats.topCategories.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>
+          ) : (
+            <ol className="space-y-3 flex-1">
+              {stats.topCategories.map((cat, idx) => {
+                const maxCount = stats.topCategories[0].count;
+                const pct = Math.round((cat.count / maxCount) * 100);
+                return (
+                  <li key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-gray-700 truncate max-w-[70%]">{cat.category}</span>
+                      <span className="text-gray-400">{cat.count.toLocaleString("id-ID")} baris</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className="h-1.5 rounded-full bg-brand-teal transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+          <div className="mt-6 pt-4 border-t border-gray-50 text-[11px] text-gray-400 font-medium text-center">
+            Berdasarkan jumlah baris dalam dataset CSV
           </div>
         </div>
       </div>
