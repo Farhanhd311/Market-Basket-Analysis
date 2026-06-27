@@ -189,8 +189,8 @@ export default function NetworkGraph({ rules }: NetworkGraphProps) {
     const target = selectedNode || hoveredNode;
     const connected = new Set<string>([target!]);
     edges.forEach(e => {
-      if (e.source === target) connected.add(edge.target);
-      if (e.target === target) connected.add(edge.source);
+      if (e.source === target) connected.add(e.target);
+      if (e.target === target) connected.add(e.source);
     });
     return connected;
   }, [edges, hoveredNode, selectedNode]);
