@@ -49,7 +49,7 @@ export function DataTable<T>({
         const aValue = a[key];
         const bValue = b[key];
 
-        if (aValue === undefined || bValue === undefined) return 0;
+        if (aValue === undefined || aValue === null || bValue === undefined || bValue === null) return 0;
 
         if (aValue < bValue) {
           return sortConfig.direction === "asc" ? -1 : 1;
