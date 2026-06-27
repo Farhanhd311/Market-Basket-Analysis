@@ -5,7 +5,8 @@ import { computeRestockPriority, type StockRow, type RestockPriority } from "@/l
 import type { AssociationRule } from "@/types";
 import RestockPriorityClient from "./RestockPriorityClient";
 
-const LS_KEY = "mba_rules";
+const LS_KEY_RULES = "mba_rules";
+const LS_KEY_SUMMARY = "mba_summary";
 
 export default function RestockPageClient({ stocks }: { stocks: StockRow[] }) {
   const [priorities, setPriorities] = useState<RestockPriority[]>([]);
@@ -14,11 +15,17 @@ export default function RestockPageClient({ stocks }: { stocks: StockRow[] }) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LS_KEY);
+      const raw = localStorage.getItem(LS_KEY_RULES);
+      const rawSummary = localStorage.getItem(LS_KEY_SUMMARY);
+
       if (raw) {
         const rules: AssociationRule[] = JSON.parse(raw);
+        // Ambil categoryMap dari summary (tersimpan saat mining dijalankan)
+        const categoryMap: Record<string, string> | undefined =
+          rawSummary ? JSON.parse(rawSummary)?.categoryMap : undefined;
+
         setHasRules(rules.length > 0);
-        setPriorities(computeRestockPriority(rules, stocks));
+        setPriorities(computeRestockPriority(rules, stocks, categoryMap));
       }
     } catch {
       // localStorage tidak tersedia atau data rusak

@@ -27,12 +27,25 @@ export interface RestockPriority {
  *
  * Formula skor: lift × scarcity
  * di mana scarcity = max(0, (minThreshold - currentStock) / minThreshold)
+ *
+ * @param categoryMap - Map produk → kategori. Jika diisi, hanya aturan
+ *   yang seluruh item-nya berada dalam kategori yang sama yang diproses.
+ *   Ini memastikan prioritas restock masuk akal secara bisnis (tidak lintas kategori).
  */
 export function computeRestockPriority(
   rules: AssociationRule[],
-  stocks: StockRow[]
+  stocks: StockRow[],
+  categoryMap?: Record<string, string>
 ): RestockPriority[] {
   if (rules.length === 0 || stocks.length === 0) return [];
+
+  // Helper: cek apakah semua item dalam satu aturan berada di kategori yang sama
+  const isSameCategory = (items: string[]): boolean => {
+    if (!categoryMap || items.length <= 1) return true;
+    const firstCat = categoryMap[items[0]];
+    if (!firstCat) return true;
+    return items.every(item => categoryMap[item] === firstCat);
+  };
 
   // Buat lookup stok berdasarkan productName (lowercase untuk toleransi case)
   const stockMap = new Map<string, StockRow>();
@@ -40,11 +53,16 @@ export function computeRestockPriority(
     stockMap.set(s.productName.toLowerCase(), s);
   }
 
+  // Filter aturan: hanya pertahankan yang antecedent+consequent sekategori
+  const validRules = rules.filter(rule =>
+    isSameCategory([...rule.antecedent, ...rule.consequent])
+  );
+
   // Kumpulkan best rule per produk consequent
   // Key = productName consequent, Value = aturan terkuat
   const bestRuleMap = new Map<string, AssociationRule>();
 
-  for (const rule of rules) {
+  for (const rule of validRules) {
     for (const cons of rule.consequent) {
       const key = cons.toLowerCase();
       const existing = bestRuleMap.get(key);

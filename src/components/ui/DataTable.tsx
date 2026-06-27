@@ -16,6 +16,8 @@ interface DataTableProps<T> {
   searchPlaceholder?: string;
   searchKey?: keyof T;
   pageSize?: number;
+  /** Ubah nilai ini untuk paksa reset ke halaman 1 (mis. saat filter luar berubah) */
+  resetKey?: string | number;
 }
 
 export function DataTable<T>({
@@ -24,10 +26,17 @@ export function DataTable<T>({
   searchPlaceholder = "Cari data...",
   searchKey,
   pageSize = 10,
+  resetKey,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset ke halaman 1 setiap kali resetKey atau data berubah
+  React.useEffect(() => {
+    setCurrentPage(1);
+    setSearchQuery("");
+  }, [resetKey, data.length]);
 
   // 1. Filter data berdasarkan query pencarian
   const filteredData = useMemo(() => {

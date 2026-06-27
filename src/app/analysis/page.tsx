@@ -403,6 +403,7 @@ export default function AnalysisPage() {
                   columns={columns}
                   searchPlaceholder="Cari produk pada antecedent atau consequent..."
                   searchKey="searchableText"
+                  resetKey={`${strictCategory}-${minLiftFilter}-${processedRules.length}`}
                   pageSize={10}
                 />
               </div>
