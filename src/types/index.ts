@@ -35,6 +35,7 @@ export interface SummaryStats {
   dateRange: { from: string; to: string };
   topCategories: CategoryStat[];
   topProduct: { name: string; count: number } | null;
+  topProducts: { name: string; count: number }[];
 }
 
 // === Aturan Asosiasi ===

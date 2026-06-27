@@ -104,6 +104,7 @@ export function getSummaryStats(): SummaryStats {
       dateRange: { from: "-", to: "-" },
       topCategories: [],
       topProduct: null,
+      topProducts: [],
     };
     return _stats;
   }
@@ -135,11 +136,13 @@ export function getSummaryStats(): SummaryStats {
     .sort((a, b) => b.count - a.count)
     .slice(0, 7);
 
-  // Top produk
-  const topProductEntry = Array.from(productCount.entries()).sort((a, b) => b[1] - a[1])[0];
-  const topProduct = topProductEntry
-    ? { name: topProductEntry[0], count: topProductEntry[1] }
-    : null;
+  // Top 7 produk terlaris
+  const topProducts = Array.from(productCount.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 7);
+
+  const topProduct = topProducts[0] || null;
 
   // Rata-rata item per keranjang
   const totalItems = baskets.reduce((s, b) => s + b.item_count, 0);
@@ -158,9 +161,10 @@ export function getSummaryStats(): SummaryStats {
     },
     topCategories,
     topProduct,
+    topProducts,
   };
 
-  return _stats;
+  return _stats as SummaryStats;
 }
 
 // ─── Reset cache (berguna untuk hot reload / testing) ─────────────────────
