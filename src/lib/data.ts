@@ -88,6 +88,18 @@ export function buildBaskets(): Basket[] {
   return _baskets;
 }
 
+// --- 2b. getProductCategoryMap() ---
+export function getProductCategoryMap(): Record<string, string> {
+  const rows = parseTransactions();
+  const map: Record<string, string> = {};
+  for (const r of rows) {
+    if (!map[r.product_name]) {
+      map[r.product_name] = r.category;
+    }
+  }
+  return map;
+}
+
 // ─── 3. getSummaryStats() ──────────────────────────────────────────────────
 export function getSummaryStats(): SummaryStats {
   if (_stats) return _stats;

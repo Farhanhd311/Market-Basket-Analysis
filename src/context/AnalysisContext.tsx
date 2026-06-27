@@ -10,6 +10,7 @@ export interface MineSummary {
   minSupport: number;
   minConfidence: number;
   maxLen: number;
+  categoryMap?: Record<string, string>;
 }
 
 interface AnalysisContextType {

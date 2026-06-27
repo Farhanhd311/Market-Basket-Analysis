@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Award, ArrowRight, BarChart3, Share2 } from "lucide-react";
 import { PageHeader, Card, EmptyState, Button } from "@/components/ui";
 import { useAnalysis } from "@/context/AnalysisContext";
@@ -17,12 +17,25 @@ import {
 import Link from "next/link";
 
 export default function RulesPage() {
-  const { rules, isMined } = useAnalysis();
+  const { rules, isMined, summary } = useAnalysis();
+  const [strictCategory, setStrictCategory] = useState<boolean>(true);
+
+  // Helper untuk mengecek apakah semua item berada dalam kategori yang sama
+  const isSameCategory = (items: string[]) => {
+    if (!strictCategory || !summary?.categoryMap) return true;
+    if (items.length <= 1) return true;
+    const firstCat = summary.categoryMap[items[0]];
+    return items.every(item => summary.categoryMap![item] === firstCat);
+  };
+
+  const filteredRules = useMemo(() => {
+    return rules.filter((r) => isSameCategory([...r.antecedent, ...r.consequent]));
+  }, [rules, strictCategory, summary?.categoryMap]);
 
   // 10 Aturan dengan Lift Tertinggi
   const chartData = useMemo(() => {
-    if (rules.length === 0) return [];
-    return [...rules]
+    if (filteredRules.length === 0) return [];
+    return [...filteredRules]
       .sort((a, b) => b.lift - a.lift)
       .slice(0, 10)
       .map((r, idx) => {
@@ -39,7 +52,7 @@ export default function RulesPage() {
           confidencePct: Number((r.confidence * 100).toFixed(1)),
         };
       });
-  }, [rules]);
+  }, [filteredRules]);
 
   // Jika belum dijalankan apriori
   if (!isMined || rules.length === 0) {
@@ -73,6 +86,17 @@ export default function RulesPage() {
         title="Hasil & Aturan Asosiasi"
         desc="Visualisasi hubungan keterkaitan produk berdasarkan model graf jaringan ko-pembelian dan bagan urutan lift kekuatan aturan."
         icon={Award}
+        actions={
+          <label className="flex items-center gap-2 bg-white px-3 py-2 border border-gray-100 rounded-xl shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+            <input
+              type="checkbox"
+              checked={strictCategory}
+              onChange={(e) => setStrictCategory(e.target.checked)}
+              className="w-4 h-4 text-brand-teal accent-brand-teal rounded border-gray-300 focus:ring-brand-teal"
+            />
+            <span className="text-xs font-semibold text-gray-700">Grup Kategori Sama</span>
+          </label>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -135,7 +159,7 @@ export default function RulesPage() {
         </Card>
 
         {/* Graf Jaringan SVG */}
-        <NetworkGraph rules={rules} />
+        <NetworkGraph rules={filteredRules} />
       </div>
     </div>
   );

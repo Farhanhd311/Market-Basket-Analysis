@@ -28,9 +28,18 @@ interface PlacementRec {
 }
 
 export default function RecommendationsPage() {
-  const { rules, isMined } = useAnalysis();
+  const { rules, isMined, summary } = useAnalysis();
   const [minLiftFilter, setMinLiftFilter] = useState<number>(1.2);
   const [activeTab, setActiveTab] = useState<"all" | "bundling" | "cross-sell" | "placement">("all");
+  const [strictCategory, setStrictCategory] = useState<boolean>(true);
+
+  // Helper untuk mengecek apakah semua item berada dalam kategori yang sama
+  const isSameCategory = (items: string[]) => {
+    if (!strictCategory || !summary?.categoryMap) return true;
+    if (items.length <= 1) return true;
+    const firstCat = summary.categoryMap[items[0]];
+    return items.every(item => summary.categoryMap![item] === firstCat);
+  };
 
   // 1. Dapatkan Paket Bundling (Itemset unik size >= 2 dengan support tinggi)
   const bundlingRecs = useMemo((): BundlingRec[] => {
@@ -39,6 +48,8 @@ export default function RecommendationsPage() {
 
     rules.forEach((rule) => {
       const combined = [...rule.antecedent, ...rule.consequent].sort();
+      if (!isSameCategory(combined)) return;
+
       const key = combined.join(",");
       if (!seen.has(key)) {
         seen.add(key);
@@ -51,12 +62,13 @@ export default function RecommendationsPage() {
     });
 
     return recs.filter((r) => r.lift >= minLiftFilter).sort((a, b) => b.support - a.support);
-  }, [rules, minLiftFilter]);
+  }, [rules, minLiftFilter, strictCategory, summary?.categoryMap]);
 
   // 2. Dapatkan Cross-sell (Aturan dengan confidence & lift tinggi)
   const crossSellRecs = useMemo((): CrossSellRec[] => {
     return rules
       .filter((r) => r.lift >= minLiftFilter)
+      .filter((r) => isSameCategory([...r.antecedent, ...r.consequent]))
       .map((r) => ({
         antecedent: r.antecedent,
         consequent: r.consequent,
@@ -65,7 +77,7 @@ export default function RecommendationsPage() {
         support: r.support,
       }))
       .sort((a, b) => b.lift - a.lift);
-  }, [rules, minLiftFilter]);
+  }, [rules, minLiftFilter, strictCategory, summary?.categoryMap]);
 
   // 3. Dapatkan Penataan Rak (Pasangan produk dengan lift tertinggi untuk didekatkan)
   const placementRecs = useMemo((): PlacementRec[] => {
@@ -73,12 +85,13 @@ export default function RecommendationsPage() {
     const recs: PlacementRec[] = [];
 
     rules.forEach((rule) => {
-      // Ambil hanya hubungan 1-ke-1 untuk penataan rak agar tak membingungkan
       if (rule.antecedent.length === 1 && rule.consequent.length === 1) {
         const itemA = rule.antecedent[0];
         const itemB = rule.consequent[0];
-        const key = [itemA, itemB].sort().join(" <-> ");
+        
+        if (!isSameCategory([itemA, itemB])) return;
 
+        const key = [itemA, itemB].sort().join(" <-> ");
         if (!seen.has(key)) {
           seen.add(key);
           recs.push({
@@ -92,7 +105,7 @@ export default function RecommendationsPage() {
     });
 
     return recs.filter((r) => r.lift >= minLiftFilter).sort((a, b) => b.lift - a.lift);
-  }, [rules, minLiftFilter]);
+  }, [rules, minLiftFilter, strictCategory, summary?.categoryMap]);
 
   const handleExportCSV = () => {
     if (rules.length === 0) return;
@@ -234,18 +247,30 @@ export default function RecommendationsPage() {
           </button>
         </div>
 
-        {/* Lift Filter */}
-        <div className="flex items-center gap-3 self-end md:self-auto bg-gray-50 px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold">
-          <span className="text-gray-500">Ambang Batas Lift &ge;</span>
-          <input
-            type="number"
-            min="0.5"
-            max="10"
-            step="0.1"
-            value={minLiftFilter}
-            onChange={(e) => setMinLiftFilter(Number(e.target.value))}
-            className="w-12 text-center font-bold text-brand-teal bg-white border border-gray-200 rounded py-0.5"
-          />
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-4 self-end md:self-auto">
+          <label className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+            <input
+              type="checkbox"
+              checked={strictCategory}
+              onChange={(e) => setStrictCategory(e.target.checked)}
+              className="w-4 h-4 text-brand-teal accent-brand-teal rounded border-gray-300 focus:ring-brand-teal"
+            />
+            <span className="text-xs font-semibold text-gray-700">Grup Kategori Sama</span>
+          </label>
+          
+          <div className="flex items-center gap-3 bg-gray-50 px-4 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold">
+            <span className="text-gray-500">Ambang Batas Lift &ge;</span>
+            <input
+              type="number"
+              min="0.5"
+              max="10"
+              step="0.1"
+              value={minLiftFilter}
+              onChange={(e) => setMinLiftFilter(Number(e.target.value))}
+              className="w-12 text-center font-bold text-brand-teal bg-white border border-gray-200 rounded py-0.5"
+            />
+          </div>
         </div>
       </div>
 

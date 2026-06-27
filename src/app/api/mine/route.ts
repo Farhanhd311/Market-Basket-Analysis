@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildBaskets } from "@/lib/data";
+import { buildBaskets, getProductCategoryMap } from "@/lib/data";
 import { runApriori } from "@/lib/apriori";
 
 export async function POST(request: Request) {
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     const maxLen = typeof body.maxLen === "number" ? body.maxLen : 3;
 
     const baskets = buildBaskets();
+    const categoryMap = getProductCategoryMap();
     
     const startTime = performance.now();
     const { itemsets, rules } = runApriori(baskets, {
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
         minSupport,
         minConfidence,
         maxLen,
+        categoryMap,
       },
     });
   } catch (error: any) {
