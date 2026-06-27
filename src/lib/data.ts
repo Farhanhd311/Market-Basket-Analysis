@@ -179,12 +179,12 @@ export async function seedProductsIfEmpty() {
     const rows = parseTransactions();
     if (rows.length === 0) return;
 
-    // Group by product_id to find unique products
-    const productMap = new Map<string, { name: string; category: string; price: number }>();
+    // Group by product_name (bukan product_id karena product_id di CSV = ID per baris, bukan per katalog)
+    // Ambil harga tertinggi dan kategori dari kemunculan pertama setiap produk
+    const productMap = new Map<string, { category: string; price: number }>();
     for (const r of rows) {
-      if (!productMap.has(r.product_id)) {
-        productMap.set(r.product_id, {
-          name: r.product_name,
+      if (!productMap.has(r.product_name)) {
+        productMap.set(r.product_name, {
           category: r.category,
           price: r.price,
         });
@@ -192,15 +192,13 @@ export async function seedProductsIfEmpty() {
     }
 
     const minStock = 15;
-    // Gunakan seeder terprediksi agar tidak melenceng jauh dari angka transaksi
-    const data = Array.from(productMap.entries()).map(([productId, info], idx) => {
-      // Buat sebagian produk dalam kondisi kritis secara deterministik agar seragam
-      const isCritical = idx % 4 === 0; // 25% produk kritis
-      const stock = isCritical ? Math.floor((idx % 10)) + 3 : Math.floor((idx % 30)) + 20;
-      
+    const data = Array.from(productMap.entries()).map(([name, info], idx) => {
+      const isCritical = idx % 4 === 0; // ~25% produk dalam kondisi kritis
+      const stock = isCritical ? (idx % 10) + 3 : (idx % 30) + 20;
+
       return {
-        productId,
-        name: info.name,
+        productId: String(idx + 1).padStart(3, "0"),
+        name,
         category: info.category,
         price: info.price,
         stock,
@@ -215,9 +213,10 @@ export async function seedProductsIfEmpty() {
         create: item,
       });
     }
-    console.log(`[data] Seeded ${data.length} products into SQLite database.`);
+    console.log(`[data] Seeded ${data.length} unique products into SQLite database.`);
   } catch (error) {
     console.error("[data] Error seeding products:", error);
   }
 }
+
 
