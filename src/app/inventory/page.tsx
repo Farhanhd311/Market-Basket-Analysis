@@ -1,31 +1,30 @@
-import { Package, Plus } from "lucide-react";
-import { PageHeader, EmptyState, Button } from "@/components/ui";
+import { Package } from "lucide-react";
+import { PageHeader } from "@/components/ui";
+import { prisma } from "@/lib/db";
+import { seedProductsIfEmpty } from "@/lib/data";
+import InventoryClient from "@/components/InventoryClient";
 
-export default function InventoryPage() {
+export const revalidate = 0; // Pastikan data selalu dinamis
+
+export default async function InventoryPage() {
+  // Seeding otomatis database jika kosong
+  await seedProductsIfEmpty();
+
+  // Ambil data produk terbaru dari SQLite via Prisma
+  const products = await prisma.product.findMany({
+    orderBy: {
+      name: "asc",
+    },
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Stok Barang (Inventory)"
-        desc="Manajemen stok produk ritel, batas minimum stok (safety stock), dan pencatatan data barang."
+        desc="Manajemen level persediaan produk, pencatatan harga, serta konfigurasi safety stock minimum secara dinamis."
         icon={Package}
-        actions={
-          <Button variant="primary" size="sm">
-            <Plus className="h-4 w-4" />
-            Tambah Produk
-          </Button>
-        }
       />
-      <EmptyState
-        title="Belum Ada Data Stok Produk"
-        desc="Data stok akan diinisialisasi dari database SQLite via Prisma. Tambahkan produk secara manual atau sinkronkan dari data transaksi."
-        icon={Package}
-        action={
-          <Button variant="primary">
-            <Plus className="h-4 w-4" />
-            Tambah Produk Baru
-          </Button>
-        }
-      />
+      <InventoryClient initialProducts={products} />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import Papa from "papaparse";
 import type { TransactionRow, Basket, SummaryStats } from "@/types";
+import { prisma } from "./db";
+
 
 // ─── Path CSV ──────────────────────────────────────────────────────────────
 const CSV_PATH = path.join(process.cwd(), "data", "transactions.csv");
@@ -167,3 +169,55 @@ export function resetCache(): void {
   _baskets = null;
   _stats = null;
 }
+
+// ─── 4. seedProductsIfEmpty() ──────────────────────────────────────────────
+export async function seedProductsIfEmpty() {
+  try {
+    const count = await prisma.product.count();
+    if (count > 0) return;
+
+    const rows = parseTransactions();
+    if (rows.length === 0) return;
+
+    // Group by product_id to find unique products
+    const productMap = new Map<string, { name: string; category: string; price: number }>();
+    for (const r of rows) {
+      if (!productMap.has(r.product_id)) {
+        productMap.set(r.product_id, {
+          name: r.product_name,
+          category: r.category,
+          price: r.price,
+        });
+      }
+    }
+
+    const minStock = 15;
+    // Gunakan seeder terprediksi agar tidak melenceng jauh dari angka transaksi
+    const data = Array.from(productMap.entries()).map(([productId, info], idx) => {
+      // Buat sebagian produk dalam kondisi kritis secara deterministik agar seragam
+      const isCritical = idx % 4 === 0; // 25% produk kritis
+      const stock = isCritical ? Math.floor((idx % 10)) + 3 : Math.floor((idx % 30)) + 20;
+      
+      return {
+        productId,
+        name: info.name,
+        category: info.category,
+        price: info.price,
+        stock,
+        minStock,
+      };
+    });
+
+    for (const item of data) {
+      await prisma.product.upsert({
+        where: { productId: item.productId },
+        update: {},
+        create: item,
+      });
+    }
+    console.log(`[data] Seeded ${data.length} products into SQLite database.`);
+  } catch (error) {
+    console.error("[data] Error seeding products:", error);
+  }
+}
+
